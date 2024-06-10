@@ -96,13 +96,20 @@ class ResNet(nn.Module):
     def __init__(self, block, nblocks, num_classes=[10]):
         super(ResNet, self).__init__()
         nb_tasks = len(num_classes)
-        blocks = [block, block, block]
+        self.nblocks = nblocks
+        if len(nblocks) == 3:
+            blocks = [block, block, block]
+        elif len(nblocks) == 4:
+            blocks = [block, block, block, block]
+
         factor = config_task.factor
         self.in_planes = int(32*factor)
         self.pre_layers_conv = conv_task(3,int(32*factor), 1, nb_tasks) 
         self.layer1 = self._make_layer(blocks[0], int(64*factor), nblocks[0], stride=2, nb_tasks=nb_tasks)
         self.layer2 = self._make_layer(blocks[1], int(128*factor), nblocks[1], stride=2, nb_tasks=nb_tasks)
         self.layer3 = self._make_layer(blocks[2], int(256*factor), nblocks[2], stride=2, nb_tasks=nb_tasks)
+        if len(nblocks) == 4:
+            self.layer4 = self._make_layer(blocks[3], int(512*factor), nblocks[3], stride=2, nb_tasks=nb_tasks)
         self.end_bns = nn.ModuleList([nn.Sequential(nn.BatchNorm2d(int(256*factor)),nn.ReLU(True)) for i in range(nb_tasks)])
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.linears = nn.ModuleList([nn.Linear(int(256*factor), num_classes[i]) for i in range(nb_tasks)])         
@@ -132,6 +139,8 @@ class ResNet(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
+        if len(self.nblocks) == 4:
+            x = self.layer4(x)
         x = self.end_bns[task](x)
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
@@ -141,5 +150,8 @@ class ResNet(nn.Module):
 
 def resnet26(num_classes=10, blocks=BasicBlock):
     return  ResNet(blocks, [4,4,4],num_classes)
+
+def resnet18(num_classes=10, blocks=BasicBlock):
+    return  ResNet(blocks, [2,2,2,2],num_classes)
 
 

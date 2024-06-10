@@ -101,6 +101,31 @@ def train(epoch, tloaders, tasks, net, args, optimizer,list_criterion=None):
 
     return [top1[i].avg for i in range(len(tasks))], [losses[i].avg for i in range(len(tasks))]
 
+def accuracy(output, target, topk=(1,)):
+    """Computes the accuracy over the k top predictions for the specified values of k"""
+    with torch.no_grad():
+        maxk = max(topk)
+        batch_size = target.size(0)
+
+        _, pred = output.topk(maxk, 1, True, True)
+        pred = pred.t()
+        correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+        res = []
+        for k in topk:
+            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+            res.append(correct_k.mul_(100.0 / batch_size))
+        return res
+
+def init_logfile(filename: str, text: str):
+    f = open(filename, 'w')
+    f.write(text+"\n")
+    f.close()
+
+def log(filename: str, text: str):
+    f = open(filename, 'a')
+    f.write(text+"\n")
+    f.close()
 
 
 def test(epoch, loaders, all_tasks, net, best_acc, args, optimizer):
